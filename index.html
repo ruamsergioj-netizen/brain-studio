@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brain Studio</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#050512">
+  <style>
+    :root {
+      --bg-dark: #050512;
+      --card-bg: #0d1127;
+      --neon-cyan: #00f0ff;
+      --neon-pink: #ff2a8d;
+      --text: #ffffff;
+      --border: #1a2040;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text); min-height: 100vh; padding-bottom: 30px; }
+
+    /* Splash Screen (3 segundos exatos) */
+    #splash-screen {
+      position: fixed; inset: 0; background: var(--bg-dark);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 9999; transition: opacity 0.5s ease;
+    }
+    .logo-anim { width: 120px; height: 120px; animation: pulse 1.5s infinite ease-in-out; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px var(--neon-cyan)); }
+      50% { transform: scale(1.15); filter: drop-shadow(0 0 25px var(--neon-pink)); }
+    }
+
+    .hidden { display: none !important; }
+    .container { max-width: 500px; margin: 0 auto; padding: 15px; }
+
+    header { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .btn { background: var(--neon-cyan); color: #000; font-weight: bold; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 8px; }
+    .btn-pink { background: var(--neon-pink); color: #fff; }
+    .btn-danger { background: #ff4444; color: #fff; }
+    
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-top: 15px; }
+    input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid var(--border); background: #050512; color: #fff; }
+
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; font-size: 0.8rem; }
+    .stat-box { background: #121838; padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
+
+    video { width: 100%; height: 200px; background: #000; border-radius: 8px; margin-top: 10px; object-fit: cover; }
+    .chat-box { height: 180px; overflow-y: auto; background: #050512; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin: 8px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Splash Screen -->
+  <div id="splash-screen">
+    <svg class="logo-anim" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="40" stroke="#00f0ff" stroke-width="6" fill="none"/>
+      <path d="M 30 50 Q 50 20 70 50 Q 50 80 30 50 Z" fill="#ff2a8d"/>
+    </svg>
+    <h2 style="margin-top: 15px; color: var(--neon-cyan);">Brain Studio</h2>
+  </div>
+
+  <div class="container hidden" id="app-content">
+    
+    <header>
+      <span style="font-weight: bold; color: var(--neon-cyan);">Brain Studio</span>
+      <button id="pwa-btn" class="btn hidden" style="width: auto; padding: 6px 12px;" onclick="installPWA()">Instalar App</button>
+    </header>
+
+    <!-- Barra de Status (Gamificação) -->
+    <div class="card stats-bar">
+      <div class="stat-box">🪙<br><span id="coins">0</span></div>
+      <div class="stat-box">⚡<br><span id="energy">100</span>/<span id="max-energy">100</span></div>
+      <div class="stat-box">⭐ Nível<br><span id="level">1</span></div>
+      <div class="stat-box">🐾 Pet<br><span id="pet-name">-</span></div>
+    </div>
+
+    <!-- Seção de Matérias AVA IFES (Oculta no estado zerado) -->
+    <div id="subjects-container" class="card hidden">
+      <h3>Matérias AVA IFES</h3>
+      <div id="subjects-list" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- Equipe e Chamada WebRTC -->
+    <div class="card">
+      <h3>Equipe de Estudos</h3>
+      <p style="font-size: 0.8rem; color: #8a8fbf;">Membros Ativos: <strong id="active-count" style="color: var(--neon-cyan);">1</strong></p>
+      <video id="local-video" autoplay playsinline muted></video>
+      <button class="btn" onclick="startVideoCall()">Ligar Câmera na Chamada</button>
+      <div class="chat-box" id="team-chat"></div>
+      <div style="display: flex; gap: 5px;">
+        <input type="text" id="team-msg" placeholder="Mensagem para a equipe..." style="margin: 0;">
+        <button class="btn btn-pink" style="width: auto; margin: 0;" onclick="sendTeamMessage()">Enviar</button>
+      </div>
+    </div>
+
+    <!-- Lumina IA com Vozes -->
+    <div class="card">
+      <h3>Lumina IA</h3>
+      <select id="voice-select"><option>Carregando vozes...</option></select>
+      <input type="password" id="gemini-key" placeholder="API Key do Gemini...">
+      <div class="chat-box" id="ai-chat"></div>
+      <div style="display: flex; gap: 5px;">
+        <input type="text" id="ai-input" placeholder="Dúvida acadêmica..." style="margin: 0;">
+        <button class="btn" style="width: auto; margin: 0;" onclick="askLumina()">Perguntar</button>
+      </div>
+    </div>
+
+    <!-- Configurações e Convite -->
+    <div class="card">
+      <h3>Configurações</h3>
+      <label style="font-size: 0.8rem;">Aviso de Prazos (Antecedência):</label>
+      <select id="notice-time">
+        <option value="15">15 minutos antes</option>
+        <option value="60" selected>1 hora antes</option>
+        <option value="1440">1 dia antes</option>
+      </select>
+      <button class="btn" onclick="inviteFriends()">Convidar Amigos</button>
+      <button class="btn btn-danger" onclick="fullLogoutReset()">Sair e Resetar Tudo</button>
+    </div>
+
+  </div>
+
+  <!-- Modal Auth (Zero-State Inicial) -->
+  <div id="auth-modal" style="position: fixed; inset: 0; background: rgba(5,5,18,0.98); display: flex; justify-content: center; align-items: center; padding: 20px; z-index: 1000;">
+    <div style="background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 360px; text-align: center;">
+      <h2>Brain Studio</h2>
+      <p style="font-size: 0.85rem; color: #8a8fbf; margin: 10px 0 15px;">Preencha os dados acadêmicos</p>
+      <input type="email" id="auth-email" placeholder="E-mail institucional/acadêmico">
+      <input type="password" id="auth-pass" placeholder="Senha">
+      <button class="btn btn-pink" onclick="submitAuth()">Entrar</button>
+    </div>
+  </div>
+
+<script>
+let state = {
+  level: 1,
+  xp: 0,
+  coins: 0,
+  energy: 100,
+  maxEnergy: 100,
+  pet: null,
+  subjects: []
+};
+
+let deferredPrompt = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const splash = document.getElementById('splash-screen');
+    splash.style.opacity = '0';
+    setTimeout(() => {
+      splash.classList.add('hidden');
+      document.getElementById('app-content').classList.remove('hidden');
+      checkAuth();
+    }, 500);
+  }, 3000);
+
+  initVoices();
+  registerSW();
+});
+
+function checkAuth() {
+  const saved = localStorage.getItem('brain_studio_db');
+  if (saved) {
+    state = JSON.parse(saved);
+    document.getElementById('auth-modal').classList.add('hidden');
+    renderApp();
+  }
+}
+
+function submitAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  if (!email) return alert("Preencha com um e-mail válido.");
+  state.pet = "Coruja Tech";
+  saveState();
+  document.getElementById('auth-modal').classList.add('hidden');
+  renderApp();
+}
+
+function saveState() {
+  localStorage.setItem('brain_studio_db', JSON.stringify(state));
+}
+
+// Fórmula de Capacidade de Energia por Nível: 100 + (Nível - 1) * 10
+function updateEnergyCapacity() {
+  state.maxEnergy = 100 + (state.level - 1) * 10;
+  document.getElementById('max-energy').innerText = state.maxEnergy;
+}
+
+function renderApp() {
+  updateEnergyCapacity();
+  document.getElementById('coins').innerText = state.coins;
+  document.getElementById('energy').innerText = state.energy;
+  document.getElementById('level').innerText = state.level;
+  document.getElementById('pet-name').innerText = state.pet || "-";
+
+  const subjBox = document.getElementById('subjects-container');
+  if (!state.subjects || state.subjects.length === 0) {
+    subjBox.classList.add('hidden');
+    subjBox.innerHTML = '';
+  } else {
+    subjBox.classList.remove('hidden');
+    document.getElementById('subjects-list').innerHTML = state.subjects.map(s => `<div>${s}</div>`).join('');
+  }
+}
+
+function fullLogoutReset() {
+  localStorage.clear();
+  sessionStorage.clear();
+  window.location.reload();
+}
+
+async function startVideoCall() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    document.getElementById('local-video').srcObject = stream;
+  } catch (err) {
+    alert("Erro ao acessar a câmera: " + err.message);
+  }
+}
+
+function sendTeamMessage() {
+  const input = document.getElementById('team-msg');
+  if (!input.value.trim()) return;
+  const chat = document.getElementById('team-chat');
+  chat.innerHTML += `<div style="margin-bottom: 5px;"><strong>Você:</strong> ${input.value}</div>`;
+  input.value = '';
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function initVoices() {
+  window.speechSynthesis.onvoiceschanged = () => {
+    const voices = window.speechSynthesis.getVoices();
+    const select = document.getElementById('voice-select');
+    select.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join('');
+  };
+}
+
+async function askLumina() {
+  const key = document.getElementById('gemini-key').value.trim();
+  const input = document.getElementById('ai-input');
+  const chat = document.getElementById('ai-chat');
+  if (!key || !input.value.trim()) return alert("Insira a chave de API e sua pergunta.");
+
+  const userText = input.value;
+  chat.innerHTML += `<div style="color: var(--neon-cyan); margin-bottom: 5px;"><strong>Você:</strong> ${userText}</div>`;
+  input.value = '';
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: userText }] }] })
+    });
+    const data = await res.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta.";
+    chat.innerHTML += `<div style="margin-bottom: 8px;"><strong>Lumina IA:</strong> ${reply}</div>`;
+    
+    const utterance = new SpeechSynthesisUtterance(reply);
+    const voices = window.speechSynthesis.getVoices();
+    const selectedVoice = document.getElementById('voice-select').value;
+    if (voices[selectedVoice]) utterance.voice = voices[selectedVoice];
+    window.speechSynthesis.speak(utterance);
+
+  } catch (e) {
+    chat.innerHTML += `<div style="color: var(--neon-pink);">Erro ao conectar com Lumina IA.</div>`;
+  }
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function inviteFriends() {
+  if (navigator.share) {
+    navigator.share({ title: 'Brain Studio', text: 'Vem estudar no Brain Studio!', url: window.location.href });
+  } else {
+    navigator.clipboard.writeText(window.location.href);
+    alert("Link de convite copiado!");
+  }
+}
+
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!window.matchMedia('(display-mode: standalone)').matches) {
+    document.getElementById('pwa-btn').classList.remove('hidden');
+  }
+});
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      document.getElementById('pwa-btn').classList.add('hidden');
+      deferredPrompt = null;
+    });
+  }
+}
+</script>
+</body>
+</html>
