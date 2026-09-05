@@ -1,0 +1,22 @@
+{
+  "name": "Brain Studio",
+  "short_name": "BrainStudio",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#050512",
+  "theme_color": "#050512",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192/00f0ff/050512?text=BS",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://via.placeholder.com/512/00f0ff/050512?text=Brain+Studio",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
