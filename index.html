@@ -1987,5 +1987,24 @@
       `).join('');
     }
   </script>
+// Gerenciador de presença via BroadcastChannel (para testes na mesma máquina/navegador)
+const presenceChannel = new BroadcastChannel('brain_studio_presence');
+const connectedUsers = new Map();
+
+// Anuncia entrada
+function announcePresence() {
+  presenceChannel.postMessage({ type: 'PING', user: currentUser });
+}
+
+presenceChannel.onmessage = (event) => {
+  const { type, user } = event.data;
+  if (type === 'PING') {
+    connectedUsers.set(user.id, { ...user, lastSeen: Date.now() });
+    updateCallsUI();
+  }
+};
+
+// Envia presença a cada 5 segundos
+setInterval(announcePresence, 5000);
 </body>
 </html>
