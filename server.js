@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve os arquivos do frontend diretamente da pasta public
+// Serve os arquivos estáticos da pasta public
 app.use(express.static(path.join(__dirname, 'public')));
 
 const server = http.createServer(app);
@@ -99,7 +99,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// --- INTEGRACÃO MOODLE (AVA IFES) ---
+// --- INTEGRAÇÃO MOODLE (AVA IFES) ---
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -137,4 +137,4 @@ app.get('/api/course-contents', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+server.listen(PORT, () => console.log(`Servidor ativo na porta ${PORT}`));
