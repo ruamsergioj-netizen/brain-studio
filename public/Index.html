@@ -6,21 +6,19 @@
   <title>Brain Studio IFES</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    /* Variáveis Globais de Tema */
+    /* Variáveis Globais Dinâmicas para Temas */
     :root {
-      --bg-main: #0f172a;
-      --bg-card: #1e293b;
-      --bg-input: #0f172a;
+      --bg-main: #0b0f19;
+      --bg-card: #121824;
+      --bg-input: #0b0f19;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --border-color: #334155;
+      --border-color: #1e293b;
       --primary: #10b981;
       --primary-hover: #059669;
-      --card-item-bg: #0f172a;
     }
 
-    /* Tema Claro */
-    body.light-theme {
+    body[data-theme="claro"], body.light-theme {
       --bg-main: #f1f5f9;
       --bg-card: #ffffff;
       --bg-input: #f8fafc;
@@ -29,13 +27,23 @@
       --border-color: #cbd5e1;
       --primary: #059669;
       --primary-hover: #047857;
-      --card-item-bg: #f8fafc;
+    }
+
+    body[data-theme="terroso"] {
+      --bg-main: #f4f1ea;
+      --bg-card: #ffffff;
+      --bg-input: #eae5db;
+      --text-main: #1c1917;
+      --text-muted: #78716c;
+      --border-color: #d6d0c4;
+      --primary: #2e6f40;
+      --primary-hover: #1e4d2b;
     }
 
     body {
+      background-color: var(--bg-main) !important;
+      color: var(--text-main) !important;
       font-family: Arial, sans-serif;
-      background-color: var(--bg-main);
-      color: var(--text-main);
       margin: 0;
       padding: 20px;
       transition: background-color 0.3s ease, color 0.3s ease;
@@ -48,73 +56,85 @@
       margin-bottom: 20px;
     }
 
-    .theme-toggle-btn {
-      width: auto;
-      padding: 8px 16px;
-      background-color: var(--border-color);
+    .theme-select {
+      padding: 8px 12px;
+      background-color: var(--bg-card);
       color: var(--text-main);
       border: 1px solid var(--border-color);
-      border-radius: 20px;
+      border-radius: 8px;
       cursor: pointer;
     }
 
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr; 
+      gap: 20px; 
+    }
+
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+    }
     
-    /* Aplicação dinâmica de estilos nos cards, incluindo AVA e Equipes */
-    .card {
-      background-color: var(--bg-card);
+    /* Força todos os cards e containers internos do AVA/Equipes a herdarem o tema ativo */
+    .card, .item-box, [class*="card"] {
+      background-color: var(--bg-card) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border-color) !important;
+      border-radius: 12px;
       padding: 20px;
-      border-radius: 8px;
-      border: 1px solid var(--border-color);
       margin-bottom: 20px;
-      color: var(--text-main);
       transition: background-color 0.3s ease, border-color 0.3s ease;
     }
 
-    input, button, textarea {
+    .text-muted {
+      color: var(--text-muted) !important;
+    }
+
+    input, select, textarea {
       width: 100%;
       padding: 10px;
-      margin: 5px 0;
-      background-color: var(--bg-input);
-      color: var(--text-main);
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
+      margin: 6px 0;
+      background-color: var(--bg-input) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border-color) !important;
+      border-radius: 6px;
       box-sizing: border-box;
     }
 
     button.btn-action {
-      background-color: var(--primary);
+      background-color: var(--primary) !important;
+      color: #ffffff !important;
       font-weight: bold;
       cursor: pointer;
-      color: #fff;
       border: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-top: 5px;
+      width: 100%;
     }
 
     button.btn-action:hover {
-      background-color: var(--primary-hover);
+      background-color: var(--primary-hover) !important;
     }
 
-    video { width: 100%; height: 200px; background: #000; border-radius: 6px; margin-top: 5px; }
+    video { 
+      width: 100%; 
+      height: 180px; 
+      background: #000; 
+      border-radius: 8px; 
+      margin-top: 8px; 
+    }
+    
     .hidden { display: none; }
 
-    /* Estilização Responsiva dos Elementos das Equipes e AVA */
-    .item-box {
-      background-color: var(--card-item-bg);
-      border: 1px solid var(--border-color);
-      padding: 12px;
-      border-radius: 6px;
-      margin: 8px 0;
-      color: var(--text-main);
-    }
-
     .chat-box {
-      height: 120px;
+      height: 140px;
       overflow-y: auto;
-      background-color: var(--bg-input);
-      border: 1px solid var(--border-color);
+      background-color: var(--bg-input) !important;
+      border: 1px solid var(--border-color) !important;
       padding: 10px;
       margin-bottom: 10px;
-      border-radius: 4px;
+      border-radius: 6px;
     }
   </style>
 </head>
@@ -122,7 +142,11 @@
 
   <div class="header-bar">
     <h1>Brain Studio IFES</h1>
-    <button class="theme-toggle-btn" onclick="toggleTheme()">🌗 Alternar Tema</button>
+    <select class="theme-select" onchange="applyTheme(this.value)">
+      <option value="dark">Escuro / Padrão</option>
+      <option value="claro">Claro / Gelo</option>
+      <option value="terroso">Terroso / Pastel</option>
+    </select>
   </div>
 
   <!-- Autenticação AVA IFES -->
@@ -136,41 +160,57 @@
   <div id="app-section" class="hidden">
     <div class="grid">
       
-      <!-- Coluna da Esquerda: Chamadas, Transmissão e Pet -->
+      <!-- Coluna da Esquerda: Chamadas, Transmissão e Mascote Ajustado -->
       <div>
         <div class="card">
           <h3>Chamadas & Transmissão de Tela</h3>
           <div id="online-list"></div>
-          <button class="btn-action" onclick="shareScreen()">Compartilhar Tela</button>
+          <button class="btn-action" style="margin-top:10px;" onclick="shareScreen()">Compartilhar Tela</button>
           
-          <h4>Vídeo da Chamada</h4>
+          <h4 style="margin-top: 15px;">Vídeo da Chamada</h4>
           <video id="localVideo" autoplay muted playsinline></video>
           <video id="remoteVideo" autoplay playsinline></video>
         </div>
 
-        <!-- Menu do Mascote (Sem barras de saciedade/felicidade) -->
+        <!-- Card do Mascote Atualizado (Sem Saciedade e Sem Felicidade) -->
         <div class="card">
-          <h3>Mascote do Aluno</h3>
-          <p>Nível Atual: <strong id="pet-level">15</strong></p>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h3 style="margin: 0;">Pipoca</h3>
+              <p class="text-muted" style="margin: 4px 0 0 0; font-size: 13px;">
+                <span style="background: var(--primary); color: #fff; padding: 2px 8px; border-radius: 10px;">Nv. 2</span> 
+                • Estudioso
+              </p>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 18px; font-weight: bold; color: var(--primary);">⚡ 39 / 50</span>
+              <div class="text-muted" style="font-size: 11px;">ENERGIA</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <span>XP: <strong>100 EXP</strong></span>
+            <button class="btn-action" style="width: auto; padding: 6px 12px;" onclick="alert('Abrindo laboratório...')">Laboratório Mascote →</button>
+          </div>
         </div>
       </div>
 
-      <!-- Coluna da Direita: AVA IFES, Equipes e Chat -->
+      <!-- Coluna da Direita: AVA IFES, Equipes e Chat Global -->
       <div>
-        <!-- Painel do AVA IFES ajustado para o tema dinâmico -->
+        <!-- Painel do AVA IFES com Sincronização Dinâmica de Cores -->
         <div class="card">
           <h3>Disciplinas AVA IFES</h3>
           <div id="courses-list"></div>
-          <div id="course-contents"></div>
+          <div id="course-contents" style="margin-top: 10px;"></div>
         </div>
 
-        <!-- Painel de Equipes sincronizado com o tema -->
+        <!-- Painel de Equipes -->
         <div class="card">
           <h3>Equipes & Baú de Recompensas (48h)</h3>
           <input type="text" id="team-name" placeholder="Nome da nova equipe">
           <button class="btn-action" onclick="createTeam()">Criar Equipe</button>
           
-          <div id="teams-list"></div>
+          <div id="teams-list" style="margin-top: 15px;"></div>
         </div>
 
         <!-- Chat Global -->
@@ -194,17 +234,23 @@
 
     const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-    // alternância de Tema
-    function toggleTheme() {
-      document.body.classList.toggle('light-theme');
-      const isLight = document.body.classList.contains('light-theme');
-      localStorage.setItem('brain_studio_theme', isLight ? 'light' : 'dark');
+    // Sincronização de Temas Globais
+    function applyTheme(themeName) {
+      document.body.setAttribute('data-theme', themeName);
+      if (themeName === 'claro') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+      localStorage.setItem('brain_studio_theme', themeName);
     }
 
-    // Carregar tema salvo
-    if (localStorage.getItem('brain_studio_theme') === 'light') {
-      document.body.classList.add('light-theme');
-    }
+    // Carregar Tema Salvo
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('brain_studio_theme') || 'dark';
+      document.querySelector('.theme-select').value = savedTheme;
+      applyTheme(savedTheme);
+    });
 
     // Autenticação no AVA IFES
     async function loginAVA() {
@@ -301,12 +347,15 @@
       if (sender) sender.replaceTrack(videoTrack);
     }
 
-    // --- PRESENÇA REAL, EQUIPES E CHAT ---
+    // --- SOCKETS, EQUIPES E CHAT ---
     socket.on('online_users_list', (users) => {
       const list = document.getElementById('online-list');
       list.innerHTML = users
         .filter(u => u.username !== currentUsername)
-        .map(u => `<div class="item-box">🟢 ${u.username} <button class="btn-action" onclick="startCall('${u.socketId}')">Ligar</button></div>`)
+        .map(u => `<div class="item-box" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🟢 ${u.username}</span> 
+            <button class="btn-action" style="width:auto;" onclick="startCall('${u.socketId}')">Ligar</button>
+          </div>`)
         .join('');
     });
 
@@ -316,9 +365,10 @@
     });
 
     socket.on('teams_updated', renderTeams);
+    
     socket.on('new_chat_message', (msg) => {
       const box = document.getElementById('chat-box');
-      box.innerHTML += `<p><strong>${msg.user}:</strong> ${msg.text}</p>`;
+      box.innerHTML += `<p style="margin: 4px 0;"><strong>${msg.user}:</strong> ${msg.text}</p>`;
       box.scrollTop = box.scrollHeight;
     });
 
@@ -326,7 +376,10 @@
 
     function createTeam() {
       const name = document.getElementById('team-name').value;
-      if (name) socket.emit('create_team', { name, creator: currentUsername });
+      if (name) {
+        socket.emit('create_team', { name, creator: currentUsername });
+        document.getElementById('team-name').value = '';
+      }
     }
 
     function donateXp(teamId) {
@@ -341,9 +394,12 @@
       const container = document.getElementById('teams-list');
       container.innerHTML = teams.map(t => `
         <div class="item-box">
-          <strong>${t.name}</strong> - XP: ${t.xp}/${t.requiredXp}
-          <button class="btn-action" onclick="donateXp('${t.id}')">Doar 5000 XP</button>
-          <button class="btn-action" onclick="claimReward('${t.id}')">Abrir Baú (48h)</button>
+          <strong>${t.name}</strong><br>
+          <span class="text-muted">XP: ${t.xp}/${t.requiredXp}</span>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button class="btn-action" onclick="donateXp('${t.id}')">Doar 5000 XP</button>
+            <button class="btn-action" onclick="claimReward('${t.id}')">Abrir Baú (48h)</button>
+          </div>
         </div>
       `).join('');
     }
@@ -358,7 +414,7 @@
 
     function renderMessages(messages) {
       document.getElementById('chat-box').innerHTML = messages
-        .map(m => `<p><strong>${m.user}:</strong> ${m.text}</p>`).join('');
+        .map(m => `<p style="margin: 4px 0;"><strong>${m.user}:</strong> ${m.text}</p>`).join('');
     }
 
     // --- CARREGAR DISCIPLINAS AVA IFES ---
@@ -367,7 +423,11 @@
       const courses = await res.json();
       const container = document.getElementById('courses-list');
       if (Array.isArray(courses)) {
-        container.innerHTML = courses.map(c => `<button class="item-box" style="text-align:left;" onclick="loadContents('${c.id}')">📘 ${c.fullname}</button>`).join('');
+        container.innerHTML = courses.map(c => `
+          <div class="item-box" style="cursor:pointer;" onclick="loadContents('${c.id}')">
+            📘 <strong>${c.fullname}</strong>
+          </div>
+        `).join('');
       }
     }
 
@@ -376,7 +436,9 @@
       const contents = await res.json();
       const container = document.getElementById('course-contents');
       if (Array.isArray(contents)) {
-        container.innerHTML = contents.map(s => `<div class="item-box">📌 <strong>${s.name}</strong></div>`).join('');
+        container.innerHTML = contents.map(s => `
+          <div class="item-box">📌 <strong>${s.name}</strong></div>
+        `).join('');
       }
     }
   </script>
