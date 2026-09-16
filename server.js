@@ -57,7 +57,7 @@ io.on('connection', (socket) => {
       id: Date.now().toString(),
       name: teamData.name,
       xp: 0,
-      requiredXp: 100000, // XP alto necessário
+      requiredXp: 100000,
       lastRewardUnlocked: 0,
       members: [teamData.creator]
     };
@@ -137,4 +137,4 @@ app.get('/api/course-contents', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
