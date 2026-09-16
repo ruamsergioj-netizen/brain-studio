@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brain Studio IFES</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    /* Variáveis Globais de Tema */
+    :root {
+      --bg-main: #0f172a;
+      --bg-card: #1e293b;
+      --bg-input: #0f172a;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --card-item-bg: #0f172a;
+    }
+
+    /* Tema Claro */
+    body.light-theme {
+      --bg-main: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-input: #f8fafc;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      --primary: #059669;
+      --primary-hover: #047857;
+      --card-item-bg: #f8fafc;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      margin: 0;
+      padding: 20px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .theme-toggle-btn {
+      width: auto;
+      padding: 8px 16px;
+      background-color: var(--border-color);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    
+    /* Aplicação dinâmica de estilos nos cards, incluindo AVA e Equipes */
+    .card {
+      background-color: var(--bg-card);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 20px;
+      color: var(--text-main);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    input, button, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      background-color: var(--bg-input);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    button.btn-action {
+      background-color: var(--primary);
+      font-weight: bold;
+      cursor: pointer;
+      color: #fff;
+      border: none;
+    }
+
+    button.btn-action:hover {
+      background-color: var(--primary-hover);
+    }
+
+    video { width: 100%; height: 200px; background: #000; border-radius: 6px; margin-top: 5px; }
+    .hidden { display: none; }
+
+    /* Estilização Responsiva dos Elementos das Equipes e AVA */
+    .item-box {
+      background-color: var(--card-item-bg);
+      border: 1px solid var(--border-color);
+      padding: 12px;
+      border-radius: 6px;
+      margin: 8px 0;
+      color: var(--text-main);
+    }
+
+    .chat-box {
+      height: 120px;
+      overflow-y: auto;
+      background-color: var(--bg-input);
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <h1>Brain Studio IFES</h1>
+    <button class="theme-toggle-btn" onclick="toggleTheme()">🌗 Alternar Tema</button>
+  </div>
+
+  <!-- Autenticação AVA IFES -->
+  <div id="login-section" class="card">
+    <h2>Login AVA IFES</h2>
+    <input type="text" id="username" placeholder="Matrícula/Usuário IFES">
+    <input type="password" id="password" placeholder="Senha">
+    <button class="btn-action" onclick="loginAVA()">Entrar</button>
+  </div>
+
+  <div id="app-section" class="hidden">
+    <div class="grid">
+      
+      <!-- Coluna da Esquerda: Chamadas, Transmissão e Pet -->
+      <div>
+        <div class="card">
+          <h3>Chamadas & Transmissão de Tela</h3>
+          <div id="online-list"></div>
+          <button class="btn-action" onclick="shareScreen()">Compartilhar Tela</button>
+          
+          <h4>Vídeo da Chamada</h4>
+          <video id="localVideo" autoplay muted playsinline></video>
+          <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+
+        <!-- Menu do Mascote (Sem barras de saciedade/felicidade) -->
+        <div class="card">
+          <h3>Mascote do Aluno</h3>
+          <p>Nível Atual: <strong id="pet-level">15</strong></p>
+        </div>
+      </div>
+
+      <!-- Coluna da Direita: AVA IFES, Equipes e Chat -->
+      <div>
+        <!-- Painel do AVA IFES ajustado para o tema dinâmico -->
+        <div class="card">
+          <h3>Disciplinas AVA IFES</h3>
+          <div id="courses-list"></div>
+          <div id="course-contents"></div>
+        </div>
+
+        <!-- Painel de Equipes sincronizado com o tema -->
+        <div class="card">
+          <h3>Equipes & Baú de Recompensas (48h)</h3>
+          <input type="text" id="team-name" placeholder="Nome da nova equipe">
+          <button class="btn-action" onclick="createTeam()">Criar Equipe</button>
+          
+          <div id="teams-list"></div>
+        </div>
+
+        <!-- Chat Global -->
+        <div class="card">
+          <h3>Chat Global</h3>
+          <div id="chat-box" class="chat-box"></div>
+          <input type="text" id="chat-input" placeholder="Digite sua mensagem...">
+          <button class="btn-action" onclick="sendChatMessage()">Enviar</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    let peerConnection;
+    let localStream;
+    let userToken = '';
+    let currentUsername = '';
+
+    const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+    // alternância de Tema
+    function toggleTheme() {
+      document.body.classList.toggle('light-theme');
+      const isLight = document.body.classList.contains('light-theme');
+      localStorage.setItem('brain_studio_theme', isLight ? 'light' : 'dark');
+    }
+
+    // Carregar tema salvo
+    if (localStorage.getItem('brain_studio_theme') === 'light') {
+      document.body.classList.add('light-theme');
+    }
+
+    // Autenticação no AVA IFES
+    async function loginAVA() {
+      currentUsername = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUsername, password })
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        userToken = data.token;
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('app-section').classList.remove('hidden');
+
+        socket.emit('register_user', { username: currentUsername });
+        loadCourses();
+      } else {
+        alert('Falha ao autenticar no AVA IFES.');
+      }
+    }
+
+    // --- WEBRTC & MÍDIA ---
+    async function setupMedia(screen = false) {
+      if (screen) {
+        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      } else {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      }
+      document.getElementById('localVideo').srcObject = localStream;
+    }
+
+    async function startCall(targetSocketId) {
+      await setupMedia(false);
+
+      peerConnection = new RTCPeerConnection(rtcConfig);
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      peerConnection.ontrack = (event) => {
+        document.getElementById('remoteVideo').srcObject = event.streams[0];
+      };
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice_candidate', { targetSocketId, candidate: event.candidate });
+        }
+      };
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      socket.emit('call_user', { targetSocketId, offer });
+    }
+
+    socket.on('incoming_call', async ({ fromSocketId, offer }) => {
+      if (!confirm("Atender chamada de vídeo?")) return;
+
+      await setupMedia(false);
+      peerConnection = new RTCPeerConnection(rtcConfig);
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      peerConnection.ontrack = (event) => {
+        document.getElementById('remoteVideo').srcObject = event.streams[0];
+      };
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice_candidate', { targetSocketId: fromSocketId, candidate: event.candidate });
+        }
+      };
+
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      socket.emit('answer_call', { targetSocketId: fromSocketId, answer });
+    });
+
+    socket.on('call_accepted', async ({ answer }) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    socket.on('ice_candidate', async ({ candidate }) => {
+      if (peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    });
+
+    async function shareScreen() {
+      if (!peerConnection) return alert("Inicie uma chamada antes de compartilhar a tela.");
+      await setupMedia(true);
+      const videoTrack = localStream.getVideoTracks()[0];
+      const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+      if (sender) sender.replaceTrack(videoTrack);
+    }
+
+    // --- PRESENÇA REAL, EQUIPES E CHAT ---
+    socket.on('online_users_list', (users) => {
+      const list = document.getElementById('online-list');
+      list.innerHTML = users
+        .filter(u => u.username !== currentUsername)
+        .map(u => `<div class="item-box">🟢 ${u.username} <button class="btn-action" onclick="startCall('${u.socketId}')">Ligar</button></div>`)
+        .join('');
+    });
+
+    socket.on('sync_initial_state', ({ teams, messages }) => {
+      renderTeams(teams);
+      renderMessages(messages);
+    });
+
+    socket.on('teams_updated', renderTeams);
+    socket.on('new_chat_message', (msg) => {
+      const box = document.getElementById('chat-box');
+      box.innerHTML += `<p><strong>${msg.user}:</strong> ${msg.text}</p>`;
+      box.scrollTop = box.scrollHeight;
+    });
+
+    socket.on('reward_status', res => alert(res.message));
+
+    function createTeam() {
+      const name = document.getElementById('team-name').value;
+      if (name) socket.emit('create_team', { name, creator: currentUsername });
+    }
+
+    function donateXp(teamId) {
+      socket.emit('donate_team_xp', { teamId, xpAmount: 5000 });
+    }
+
+    function claimReward(teamId) {
+      socket.emit('claim_team_reward', { teamId });
+    }
+
+    function renderTeams(teams) {
+      const container = document.getElementById('teams-list');
+      container.innerHTML = teams.map(t => `
+        <div class="item-box">
+          <strong>${t.name}</strong> - XP: ${t.xp}/${t.requiredXp}
+          <button class="btn-action" onclick="donateXp('${t.id}')">Doar 5000 XP</button>
+          <button class="btn-action" onclick="claimReward('${t.id}')">Abrir Baú (48h)</button>
+        </div>
+      `).join('');
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      if (input.value) {
+        socket.emit('send_chat_message', { user: currentUsername, text: input.value });
+        input.value = '';
+      }
+    }
+
+    function renderMessages(messages) {
+      document.getElementById('chat-box').innerHTML = messages
+        .map(m => `<p><strong>${m.user}:</strong> ${m.text}</p>`).join('');
+    }
+
+    // --- CARREGAR DISCIPLINAS AVA IFES ---
+    async function loadCourses() {
+      const res = await fetch(`/api/courses?token=${userToken}&userid=0`);
+      const courses = await res.json();
+      const container = document.getElementById('courses-list');
+      if (Array.isArray(courses)) {
+        container.innerHTML = courses.map(c => `<button class="item-box" style="text-align:left;" onclick="loadContents('${c.id}')">📘 ${c.fullname}</button>`).join('');
+      }
+    }
+
+    async function loadContents(courseId) {
+      const res = await fetch(`/api/course-contents?token=${userToken}&courseid=${courseId}`);
+      const contents = await res.json();
+      const container = document.getElementById('course-contents');
+      if (Array.isArray(contents)) {
+        container.innerHTML = contents.map(s => `<div class="item-box">📌 <strong>${s.name}</strong></div>`).join('');
+      }
+    }
+  </script>
+</body>
+</html>
